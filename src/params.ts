@@ -9,8 +9,10 @@ type UnwrapParamValue<T> = {
     : never;
 };
 type UnwrapParam<T> = {
-  [K in keyof T]: T[K] extends BaseParam<infer U>
-    ? BaseParam<U>
+  [K in keyof T]: T[K] extends NumberParam //
+    ? NumberParam
+    : T[K] extends ColorParam
+    ? ColorParam
     : T[K] extends Params<infer V>
     ? UnwrapParam<V>
     : never;
@@ -104,8 +106,10 @@ export class ColorParam extends BaseParam<string> {
   }
 }
 
+export type Param = NumberParam | ColorParam;
+
 export type ParamDefinition = {
-  [key: string]: BaseParam<any> | Params;
+  [key: string]: Param | Params;
 };
 
 export class Params<T extends ParamDefinition = ParamDefinition> {
@@ -113,7 +117,6 @@ export class Params<T extends ParamDefinition = ParamDefinition> {
   private _changeCallbacks: Array<(key: string, newValue: any) => void> = [];
 
   constructor(def: T) {
-    console.log("Params constructor", def);
     this.def = def;
 
     // Add listeners to nested Params and individual params
@@ -140,6 +143,7 @@ export class Params<T extends ParamDefinition = ParamDefinition> {
   ): void;
   set(update: PartialDeep<UnwrapParamValue<T>>): void;
   set(...args: any[]): void {
+    console.log("Params.set", args);
     if (args.length === 2 && typeof args[0] === "string") {
       const path = args[0];
       const value = args[1];
@@ -225,7 +229,7 @@ export function p<T extends ParamDefinition>(def: T): Params<T>;
 // export function p<T extends ParamDefinition>(name: string, def: T): Params<T>;
 export function p<T extends ParamDefinition>(
   ...args: any[]
-): Params<T> | BaseParam<any> {
+): Params<T> | Param {
   // Handle ColorParam
   if (args.length === 1 && typeof args[0] === "string") {
     return new ColorParam(args[0]);
