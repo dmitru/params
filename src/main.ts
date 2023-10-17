@@ -2,13 +2,22 @@ import * as dat from "dat.gui";
 
 import { p } from "./params";
 import "./addons/dat.gui";
+import "./addons/dat.gui.css";
 import "./addons/persistence";
 
 const params = p({
-  foo: p(1),
+  p1: p(1),
+  p2: p(1),
+  p3: p(1),
   nested: p({
-    bar: p(1, 0, 10, 0.1),
-    bgColor: p("#ffd332"),
+    moreNested: p({
+      foo: p(1, 0, 10, 0.1),
+      bar: p(1, 0, 10, 0.1),
+    }),
+    colors: p({
+      bgColor: p("#ffd332"),
+      fgColor: p("#ffd332"),
+    }),
   }),
 });
 
