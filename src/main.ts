@@ -1,8 +1,10 @@
 import * as dat from "dat.gui";
 import { p } from "./params";
-import { addDatGuiControls } from "./dat.gui";
-import { restoreFromLocalstorage, saveToLocalstorage } from "./persistence";
-import "./style.css";
+import { addDatGuiControls } from "./addons/dat.gui";
+import {
+  restoreFromLocalstorage,
+  saveToLocalstorage,
+} from "./addons/persistence";
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div>
@@ -14,7 +16,7 @@ const params = p({
   foo: p(1),
   nested: p({
     bar: p(2, 0, 10, 0.1),
-    bgColor: p("#fff"),
+    bgColor: p("#ffd332ff"),
   }),
 });
 

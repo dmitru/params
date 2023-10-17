@@ -1,4 +1,4 @@
-import { Params } from "./params";
+import { Params } from "../params";
 
 export function restoreFromLocalstorage(params: Params, key = "data") {
   const dataRaw = localStorage.getItem(key);

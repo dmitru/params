@@ -1,4 +1,4 @@
-import { Params, ColorParam, NumberParam } from "./params";
+import { Params, ColorParam, NumberParam } from "../params";
 
 export function addDatGuiControls(params: Params, gui: dat.GUI) {
   for (const [key, param] of Object.entries(params.def)) {
