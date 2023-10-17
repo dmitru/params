@@ -1,3 +1,63 @@
+import type { PartialDeep, Get, Join } from "type-fest";
+
+// Core recursive type to unwrap Params
+type UnwrapParamValue<T> = {
+  [K in keyof T]: T[K] extends BaseParam<infer U>
+    ? U
+    : T[K] extends Params<infer V>
+    ? UnwrapParamValue<V>
+    : never;
+};
+type UnwrapParam<T> = {
+  [K in keyof T]: T[K] extends BaseParam<infer U>
+    ? BaseParam<U>
+    : T[K] extends Params<infer V>
+    ? UnwrapParam<V>
+    : never;
+};
+type DistributedKeyof<Target> = Target extends any ? keyof Target : never;
+
+type DistributedAccess<Target, Key> = Target extends any
+  ? Key extends keyof Target
+    ? Target[Key]
+    : undefined
+  : never;
+
+type Leaf = BaseParam<any>;
+
+type DepthCounter = [never, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+type ObjectPaths<
+  Target,
+  Depth extends DepthCounter[number] = 10
+> = Depth extends never
+  ? never
+  : Target extends never
+  ? never
+  : Target extends Leaf
+  ? never
+  : {
+      [Key in string & DistributedKeyof<Target>]:
+        | [Key]
+        | (NonNullable<
+            DistributedAccess<Target, Key>
+          > extends (infer ArrayItem)[]
+            ?
+                | [Key, number]
+                | (ObjectPaths<
+                    ArrayItem,
+                    DepthCounter[Depth]
+                  > extends infer V extends any[]
+                    ? [Key, number, ...V]
+                    : never)
+            : ObjectPaths<
+                NonNullable<DistributedAccess<Target, Key>>,
+                DepthCounter[Depth]
+              > extends infer V extends any[]
+            ? [Key, ...V]
+            : never);
+    }[string & DistributedKeyof<Target>];
+
 export abstract class BaseParam<T> {
   name: string = "";
   protected _value: T;
@@ -44,31 +104,25 @@ export class ColorParam extends BaseParam<string> {
   }
 }
 
-type ParamType = ParamDefinition;
 export type ParamDefinition = {
-  [key: string]: Params<any> | ParamType | BaseParam<any>;
+  [key: string]: BaseParam<any> | Params;
 };
 
-// type ParamTypes = BaseParam<any> | Params;
-
-// export type ParamDefinition = {
-//   [key: string]: ParamTypes | ParamDefinition;
-// };
-
 export class Params<T extends ParamDefinition = ParamDefinition> {
-  private _def: T;
+  def: T;
   private _changeCallbacks: Array<(key: string, newValue: any) => void> = [];
 
   constructor(def: T) {
     console.log("Params constructor", def);
-    this._def = def;
+    this.def = def;
 
     // Add listeners to nested Params and individual params
     for (let key in def) {
       const val = def[key];
       if (val instanceof BaseParam) {
+        val.name = key;
         val.onChange((newValue) => {
-          this._changeCallbacks.forEach((cb) => cb(key, newValue));
+          this._changeCallbacks.forEach((cb) => cb(`${key}`, newValue));
         });
       } else if (val instanceof Params) {
         val.on("change", (nestedKey, newValue) => {
@@ -76,44 +130,61 @@ export class Params<T extends ParamDefinition = ParamDefinition> {
             cb(`${key}.${nestedKey}`, newValue)
           );
         });
-      } else if (typeof val === "object") {
-        // assume it's a ParamDefinition
-        const nestedParams = new Params(val as ParamDefinition);
-        this._def[key] = nestedParams;
-        nestedParams.on("change", (nestedKey, newValue) => {
-          this._changeCallbacks.forEach((cb) =>
-            cb(`${key}.${nestedKey}`, newValue)
-          );
-        });
       }
     }
   }
 
-  getParam<Key extends KeyOfDeep<T>>(path: Key): TypeOfDeepKey<T, Key> {
+  set<Path extends Join<ObjectPaths<UnwrapParam<T>>, ".">>(
+    path: Path,
+    value: Get<UnwrapParamValue<T>, Path>
+  ): void;
+  set(update: PartialDeep<UnwrapParamValue<T>>): void;
+  set(...args: any[]): void {
+    if (args.length === 2 && typeof args[0] === "string") {
+      const path = args[0];
+      const value = args[1];
+      const parts = path.split(".") as string[];
+      let val: any = this.def;
+      for (let part of parts) {
+        if (val instanceof Params) {
+          val = val.get(part);
+        } else {
+          val = val[part];
+        }
+      }
+      if (val instanceof BaseParam) {
+        val.value = value;
+      }
+    }
+
+    if (args.length === 1 && typeof args[0] === "object") {
+      const update = args[0];
+      for (let key in update) {
+        const val = (update as any)[key];
+        const param = this.def[key];
+        if (param instanceof BaseParam) {
+          param.value = val;
+        } else if (param instanceof Params) {
+          param.set(val);
+        }
+      }
+    }
+  }
+
+  get<Path extends Join<ObjectPaths<UnwrapParam<T>>, ".">>(
+    path: Path
+  ): Get<UnwrapParam<T>, Path> {
     const parts = path.split(".") as string[];
-    let val: any = this._def;
+    let val: any = this.def;
     for (let part of parts) {
       if (val instanceof Params) {
-        val = val.getParam(part);
+        val = val.get(part);
       } else {
         val = val[part];
       }
     }
     return val;
   }
-
-  get = (path: string): Params | BaseParam<any> | undefined => {
-    const parts = path.split(".");
-    let val: any = this._def;
-    for (let part of parts) {
-      if (val instanceof Params) {
-        val = val.getParam(part);
-      } else {
-        val = val[part];
-      }
-    }
-    return val;
-  };
 
   on(event: string, callback: (key: string, newValue: any) => void) {
     if (event === "change") {
@@ -129,14 +200,17 @@ export class Params<T extends ParamDefinition = ParamDefinition> {
     }
   }
 
-  set(newData: Partial<ParamDefinition>): void {
-    for (let key in newData) {
-      const val = newData[key];
-      const oldVal = this._def[key];
-      if (oldVal instanceof BaseParam && val instanceof BaseParam) {
-        oldVal.value = val.value;
+  values(): UnwrapParamValue<T> {
+    const values: any = {};
+    for (let key in this.def) {
+      const val = this.def[key];
+      if (val instanceof BaseParam) {
+        values[key] = val.value;
+      } else if (val instanceof Params) {
+        values[key] = val.values();
       }
     }
+    return values;
   }
 }
 
@@ -148,7 +222,7 @@ export function p(
   step?: number
 ): NumberParam;
 export function p<T extends ParamDefinition>(def: T): Params<T>;
-export function p<T extends ParamDefinition>(name: string, def: T): Params<T>;
+// export function p<T extends ParamDefinition>(name: string, def: T): Params<T>;
 export function p<T extends ParamDefinition>(
   ...args: any[]
 ): Params<T> | BaseParam<any> {
@@ -187,26 +261,3 @@ export function p<T extends ParamDefinition>(
 
   throw new Error("Invalid arguments for p()");
 }
-
-// Extracts deeply nested keys from an object
-type KeyOfDeep<T> = {
-  [K in keyof T]: K extends string
-    ? T[K] extends ParamType
-      ? K | `${K}.${KeyOfDeep<T[K]>}`
-      : K
-    : never;
-}[keyof T];
-
-// Given a deep key, extract the corresponding type
-type TypeOfDeepKey<
-  T,
-  Key extends string
-> = Key extends `${infer K}.${infer Rest}`
-  ? K extends keyof T
-    ? Rest extends KeyOfDeep<T[K]>
-      ? TypeOfDeepKey<T[K], Rest>
-      : never
-    : never
-  : Key extends keyof T
-  ? T[Key]
-  : never;

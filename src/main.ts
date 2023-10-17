@@ -1,24 +1,27 @@
-import './style.css'
-import typescriptLogo from './typescript.svg'
-import viteLogo from '/vite.svg'
-import { setupCounter } from './counter.ts'
+import * as dat from "dat.gui";
+import { p } from "./params";
+import { addDatGuiControls } from "./dat.gui";
+import { restoreFromLocalstorage, saveToLocalstorage } from "./persistence";
+import "./style.css";
 
-document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
+document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div>
-    <a href="https://vitejs.dev" target="_blank">
-      <img src="${viteLogo}" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://www.typescriptlang.org/" target="_blank">
-      <img src="${typescriptLogo}" class="logo vanilla" alt="TypeScript logo" />
-    </a>
-    <h1>Vite + TypeScript</h1>
-    <div class="card">
-      <button id="counter" type="button"></button>
-    </div>
-    <p class="read-the-docs">
-      Click on the Vite and TypeScript logos to learn more
-    </p>
+    Example with dat.gui
   </div>
-`
+`;
 
-setupCounter(document.querySelector<HTMLButtonElement>('#counter')!)
+const params = p({
+  foo: p(1),
+  nested: p({
+    bar: p(2, 0, 10, 0.1),
+    bgColor: p("#fff"),
+  }),
+});
+
+restoreFromLocalstorage(params);
+params.on("change", (key, newValue) => {
+  console.log("change", key, newValue, params.values());
+  saveToLocalstorage(params);
+});
+
+addDatGuiControls(params, new dat.GUI());

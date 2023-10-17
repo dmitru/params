@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ColorParam, NumberParam, Params, p } from "../params";
 
 describe("NumberParam", () => {
@@ -17,35 +17,35 @@ describe("NumberParam", () => {
 });
 
 describe("Params", () => {
-  it("can be constructed", () => {
+  it("can be constructed, get and set", () => {
     const params = new Params({
       foo: new NumberParam(1),
-      nested: {
+      nested: new Params({
         bar: new NumberParam(2),
-      },
+      }),
     });
 
-    const nestedParams = params.getParam("nested");
+    expect(params.get("nested")).toBeInstanceOf(Params);
+    expect(params.get("nested.bar")).toBeInstanceOf(NumberParam);
+    expect(params.get("nested.bar").value).toBe(2);
 
-    expect(params.getParam("foo")!.value).toBe(1);
-    expect(params.getParam("nested")!).toBeInstanceOf(Params);
-    expect(params.getParam("nested.bar")!).toBeInstanceOf(NumberParam);
-    expect(params.getParam("nested.bar")!.value).toBe(2);
+    params.set("nested.bar", 3);
+    expect(params.get("nested.bar").value).toBe(3);
   });
 
   it("calls change events", () => {
     const params = new Params({
       foo: new NumberParam(1),
-      nested: {
+      nested: new Params({
         bar: new NumberParam(2),
-      },
+      }),
     });
 
     const onChange = vi.fn();
     params.on("change", onChange);
-    params.getParam("foo")!.value = 3;
+    params.get("foo").value = 3;
     expect(onChange).toBeCalledWith("foo", 3);
-    params.getParam("nested.bar")!.value = 4;
+    params.set("nested.bar", 4);
     expect(onChange).toBeCalledWith("nested.bar", 4);
   });
 });
@@ -54,46 +54,65 @@ describe("function p()", () => {
   it("can be used to construct Params", () => {
     const params = p({
       foo: p(1),
-      nested: {
+      nested: p({
         bgColor: p("#fff"),
         bar: p(2),
-      },
+      }),
     });
 
-    expect(params.getParam("nested")).toBeInstanceOf(Params);
+    expect(params.get("nested")).toBeInstanceOf(Params);
     expect(params).toBeInstanceOf(Params);
-    expect(params.getParam("nested.bgColor")).toBeInstanceOf(ColorParam);
-    expect(params.getParam("nested.bar")).toBeInstanceOf(NumberParam);
-    expect(params.getParam("foo").value).toBe(1);
-    expect(params.getParam("nested.bar")!.value).toBe(2);
+    expect(params.get("nested.bgColor")).toBeInstanceOf(ColorParam);
+    expect(params.get("nested.bar")).toBeInstanceOf(NumberParam);
+    expect(params.get("foo").value).toBe(1);
+    expect(params.get("nested.bar").value).toBe(2);
   });
 
   it("can be used to construct nested Params", () => {
     const params = p({
       foo: p(1),
-      nested: {
+      nested: p({
         bgColor: p("#fff"),
         bar: p(2),
         deepNestWithP: p({
           baz: p(3),
         }),
-        deepNestWithoutP: {
-          baz: p(3),
+      }),
+    });
+
+    expect(params.values()).toStrictEqual({
+      foo: 1,
+      nested: {
+        bgColor: "#fff",
+        bar: 2,
+        deepNestWithP: {
+          baz: 3,
         },
       },
     });
 
     expect(params).toBeInstanceOf(Params);
-    expect(params.getParam("nested")).toBeInstanceOf(Params);
-    expect(params.getParam("nested.deepNestWithP")).toBeInstanceOf(Params);
-    expect(params.getParam("nested.deepNestWithoutP")).toBeInstanceOf(Params);
-
-    expect(params.getParam("nested.bgColor")!).toBeInstanceOf(ColorParam);
-    expect(params.getParam("nested.bar")!).toBeInstanceOf(NumberParam);
-    expect(params.getParam("foo")!.value).toBe(1);
     expect(params.get("nested")).toBeInstanceOf(Params);
-    expect(params.getParam("nested.bar")!.value).toBe(2);
-    expect(params.getParam("nested.deepNestWithP.baz")!.value).toBe(3);
-    expect(params.getParam("nested.deepNestWithoutP.baz")!.value).toBe(3);
+    expect(params.get("nested.deepNestWithP")).toBeInstanceOf(Params);
+
+    expect(params.get("nested.bgColor")).toBeInstanceOf(ColorParam);
+    expect(params.get("nested.bar")).toBeInstanceOf(NumberParam);
+    expect(params.get("foo").value).toBe(1);
+    expect(params.get("nested")).toBeInstanceOf(Params);
+    expect(params.get("nested.bar").value).toBe(2);
+    expect(params.get("nested.deepNestWithP.baz").value).toBe(3);
+
+    params.set({ foo: 42, nested: { deepNestWithP: { baz: 43 } } });
+
+    expect(params.values()).toStrictEqual({
+      foo: 42,
+      nested: {
+        bgColor: "#fff",
+        bar: 2,
+        deepNestWithP: {
+          baz: 43,
+        },
+      },
+    });
   });
 });
