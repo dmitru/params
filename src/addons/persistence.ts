@@ -10,6 +10,22 @@ export function restoreFromLocalstorage(params: Params, key = "data") {
   return false;
 }
 
-export function saveToLocalstorage(params: Params, key = "data") {
-  localStorage.setItem(key, JSON.stringify(params.values()));
+function debounceSave(
+  func: (params: Params, key?: string) => void,
+  wait = 100
+) {
+  let timeout: NodeJS.Timeout;
+  return function (this: any, params: Params, key?: string) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => {
+      func.apply(this, [params, key]);
+    }, wait);
+  };
 }
+
+export const saveToLocalstorage = debounceSave(function (
+  params: Params,
+  key = "data"
+) {
+  localStorage.setItem(key, JSON.stringify(params.values()));
+});

@@ -26,4 +26,8 @@ params.on("change", (key, newValue) => {
   saveToLocalstorage(params);
 });
 
+params.get("nested.bgColor").onChange((newColor, param) => {
+  console.log("nested.bgColor.onChange", newColor, param);
+});
+
 addDatGuiControls(params, new dat.GUI());

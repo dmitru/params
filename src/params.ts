@@ -61,7 +61,7 @@ type ObjectPaths<
 export abstract class BaseParam<T> {
   name: string = "";
   protected _value: T;
-  private _callbacks: Array<(newValue: T) => void> = [];
+  private _callbacks: Array<(newValue: T, param: BaseParam<T>) => void> = [];
 
   constructor(initialValue: T) {
     this._value = initialValue;
@@ -73,10 +73,10 @@ export abstract class BaseParam<T> {
 
   set value(v: T) {
     this._value = v;
-    this._callbacks.forEach((cb) => cb(v));
+    this._callbacks.forEach((cb) => cb(v, this));
   }
 
-  onChange(callback: (newValue: T) => void): void {
+  onChange(callback: (newValue: T, param: BaseParam<T>) => void): void {
     this._callbacks.push(callback);
   }
 
