@@ -1,25 +1,32 @@
 import * as dat from "dat.gui";
 
-import { p } from "./params";
-import "./addons/dat.gui";
-import "./addons/dat.gui.css";
-import "./addons/persistence";
+import { p } from "./core/params";
+import "./plugins/datgui/style.css";
+import { PersistencePlugin } from "./plugins/persistence";
+import { DatGuiPlugin } from "./plugins/datgui";
+import { IosControllerPlugin } from "./plugins/ios-touch-controller";
 
 const params = p({
   p1: p(1),
   p2: p(1),
   p3: p(1),
-  nested: p({
-    moreNested: p({
-      foo: p(1, 0, 10, 0.1),
-      bar: p(1, 0, 10, 0.1),
-    }),
-    colors: p({
-      bgColor: p("#ffd332"),
-      fgColor: p("#ffd332"),
-    }),
-  }),
+  // nested: p({
+  //   moreNested: p({
+  //     foo: p(1, 0, 10, 0.1),
+  //     bar: p(1, 0, 10, 0.1),
+  //   }),
+  //   colors: p({
+  //     bgColor: p("#ffd332"),
+  //     fgColor: p("#ffd332"),
+  //   }),
+  // }),
 });
+
+params.plugins([
+  new PersistencePlugin(),
+  new DatGuiPlugin(),
+  new IosControllerPlugin(),
+]);
 
 // Enable Dat.gui controls
 const gui = new dat.GUI();

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { ColorParam, NumberParam, Params, p } from "../params";
+import { ColorParam, NumberParam, Params, p } from "../core/params";
 
 describe("NumberParam", () => {
   it("can be constructed", () => {

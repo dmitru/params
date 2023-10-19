@@ -1,21 +1,44 @@
 {
   "name": "params",
-  "private": true,
-  "version": "0.0.0",
+  "private": false,
+  "version": "0.0.1",
   "type": "module",
+  "main": "./dist/core/index.cjs.js",
+  "module": "./dist/core/index.es.js",
+  "types": "./dist/core/index.d.ts",
+  "exports": {
+    "./core": {
+      "import": "./dist/core/index.js",
+      "types": "./dist/core/index.d.ts"
+    },
+    "./plugins/datgui": {
+      "import": "./dist/plugins/datgui/index.js",
+      "types": "./dist/plugins/datgui/index.d.ts"
+    },
+    "./plugins/persistence": {
+      "import": "./dist/plugins/persistence/index.js",
+      "types": "./dist/plugins/persistence/index.d.ts"
+    }
+  },
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "npm run build:core && npm run build:plugin-datgui && npm run build:plugin-persistence",
+    "build:core": "tsc && vite build --config vite.config.core.js",
+    "build:plugin-persistence": "tsc && vite build --config vite.config.plugin-persistence.js",
+    "build:plugin-datgui": "tsc && vite build --config vite.config.plugin-datgui.js",
     "test": "vitest",
     "preview": "vite preview"
   },
   "devDependencies": {
-    "@types/dat.gui": "^0.7.10",
+    "@types/dat.gui": "^0.7.11",
     "dat.gui": "^0.7.9",
-    "type-fest": "^4.4.0",
-    "typescript": "^5.0.2",
-    "vite": "^4.4.5",
+    "type-fest": "^4.5.0",
+    "typescript": "^5.2.2",
+    "vite": "^4.5.0",
     "vite-plugin-dts": "^3.6.0",
     "vitest": "^0.34.6"
+  },
+  "dependencies": {
+    "json-rpc-2.0": "^1.6.0"
   }
 }

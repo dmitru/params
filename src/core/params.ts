@@ -1,4 +1,5 @@
 import type { PartialDeep, Get, Join } from "type-fest";
+import type { IPlugin } from "../plugins/plugin";
 
 // Core recursive type to unwrap Params
 type UnwrapParamValue<T> = {
@@ -136,6 +137,10 @@ export class Params<T extends ParamDefinition = ParamDefinition> {
       }
     }
   }
+
+  plugins = (plugins: IPlugin[]) => {
+    plugins.forEach((plugin) => plugin.extend(this));
+  };
 
   set<Path extends Join<ObjectPaths<UnwrapParam<T>>, ".">>(
     path: Path,
