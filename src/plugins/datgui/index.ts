@@ -26,32 +26,33 @@ export class DatGuiPlugin implements IPlugin {
 
   _autosaveChangeCallback = () => {};
 
+  destroy(): void {
+    this.gui?.destroy();
+  }
+
+  gui?: dat.GUI;
+
   extend(instance: Params<any>): void {
     const plugin = this;
 
     instance.datGui = function (gui: dat.GUI) {
+      plugin.gui = gui;
       addDatGuiControls(this, gui);
     };
 
     function addDatGuiControls(params: Params, gui: dat.GUI) {
-      console.log("addDatGuiControls", params.def);
       for (const [key, param] of Object.entries(params.def)) {
-        console.log("addDatGuiControls", key, param);
         if (param instanceof ColorParam) {
-          console.log("check 1");
           gui.addColor(param, "value").name(param.name);
         } else if (param instanceof NumberParam) {
-          console.log("check 2");
           gui
             .add(param, "value", param.min, param.max, param.step)
             .name(param.name);
         } else if (param instanceof Params) {
-          console.log("check 3");
           const folder = gui.addFolder(key);
           folder.open();
           addDatGuiControls(param, folder);
         } else {
-          console.log("check 4");
         }
       }
 

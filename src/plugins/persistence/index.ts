@@ -38,7 +38,6 @@ export class PersistencePlugin implements IPlugin {
     const plugin = this;
 
     this._autosaveChangeCallback = function () {
-      console.log("autosaveChangeCallback");
       saveToLocalstorageThrottled(instance, plugin.PERSISTENCE_KEY);
     };
 
@@ -61,7 +60,6 @@ export class PersistencePlugin implements IPlugin {
 
     function restoreFromLocalstorage(params: Params, key: string) {
       const dataRaw = localStorage.getItem(key);
-      // console.log("restoreFromLocalstorage", dataRaw);
       if (dataRaw) {
         const data = JSON.parse(dataRaw);
         params.set(data);
@@ -71,7 +69,6 @@ export class PersistencePlugin implements IPlugin {
     }
 
     function saveToLocalstorage(params: Params, key: string) {
-      console.log("saveToLocalstorage", params, key, params.values());
       localStorage.setItem(key, JSON.stringify(params.values()));
     }
 
@@ -83,7 +80,6 @@ export class PersistencePlugin implements IPlugin {
       let timeout: NodeJS.Timeout;
 
       return function (this: any, params: Params, key: string) {
-        console.log("throttleSave", params, key);
         if (canCall) {
           func.apply(this, [params, key]);
           canCall = false;

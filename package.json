@@ -18,14 +18,21 @@
     "./plugins/persistence": {
       "import": "./dist/plugins/persistence/index.js",
       "types": "./dist/plugins/persistence/index.d.ts"
+    },
+    "./plugins/ios-touch-controller": {
+      "import": "./dist/plugins/ios-touch-controller/index.js",
+      "types": "./dist/plugins/ios-touch-controller/index.d.ts"
     }
   },
   "scripts": {
     "dev": "vite",
-    "build": "npm run build:core && npm run build:plugin-datgui && npm run build:plugin-persistence",
+    "build": "npm run build:core && npm run build:plugin-datgui && npm run build:plugin-persistence && build:plugin-ios-touch-controller",
     "build:core": "tsc && vite build --config vite.config.core.js",
+    "build:core:watch": "npm run build:core -- --watch",
     "build:plugin-persistence": "tsc && vite build --config vite.config.plugin-persistence.js",
     "build:plugin-datgui": "tsc && vite build --config vite.config.plugin-datgui.js",
+    "build:plugin-ios-touch-controller": "tsc && vite build --config vite.config.plugin-ios-touch-controller.js",
+    "build:plugin-ios-touch-controller:watch": "npm run build:plugin-ios-touch-controller -- --watch",
     "test": "vitest",
     "preview": "vite preview"
   },

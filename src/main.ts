@@ -10,16 +10,16 @@ const params = p({
   p1: p(1),
   p2: p(1),
   p3: p(1),
-  // nested: p({
-  //   moreNested: p({
-  //     foo: p(1, 0, 10, 0.1),
-  //     bar: p(1, 0, 10, 0.1),
-  //   }),
-  //   colors: p({
-  //     bgColor: p("#ffd332"),
-  //     fgColor: p("#ffd332"),
-  //   }),
-  // }),
+  nested: p({
+    moreNested: p({
+      foo: p(1, 0, 10, 0.1),
+      bar: p(1, 0, 10, 0.1),
+    }),
+    colors: p({
+      bgColor: p("#ffd332"),
+      fgColor: p("#ffd332"),
+    }),
+  }),
 });
 
 params.plugins([
@@ -27,6 +27,11 @@ params.plugins([
   new DatGuiPlugin(),
   new IosControllerPlugin(),
 ]);
+
+// @ts-ignore
+window["params"] = params;
+
+params.touchController.addAll();
 
 // Enable Dat.gui controls
 const gui = new dat.GUI();
@@ -51,8 +56,7 @@ function updateHtml() {
 }
 updateHtml();
 
-params.on("change", (key, newValue) => {
-  console.log("change", key, newValue, params.values());
+params.on("change", (evt) => {
   updateHtml();
 });
 

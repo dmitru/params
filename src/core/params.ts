@@ -64,10 +64,17 @@ type ObjectPaths<
 export abstract class BaseParam<T> {
   name: string = "";
   protected _value: T;
-  private _callbacks: Array<(newValue: T, param: BaseParam<T>) => void> = [];
+  private _changeCallbacks: Array<
+    (evt: ChangeEvent<T>, param: BaseParam<T>) => void
+  > = [];
 
   constructor(initialValue: T) {
     this._value = initialValue;
+  }
+
+  // TODO: return a full dot-separated param path here (store refs to parents?)
+  get key() {
+    return this.name;
   }
 
   get value(): T {
@@ -76,15 +83,35 @@ export abstract class BaseParam<T> {
 
   set value(v: T) {
     this._value = v;
-    this._callbacks.forEach((cb) => cb(v, this));
+    this._changeCallbacks.forEach((cb) => cb(new ChangeEvent(v), this));
   }
 
-  onChange(callback: (newValue: T, param: BaseParam<T>) => void): void {
-    this._callbacks.push(callback);
+  setValue = (v: T, type = "") => {
+    if (v === this._value) return;
+    this._value = v;
+    this._changeCallbacks.forEach((cb) =>
+      cb(new ChangeEvent(v, "", type), this)
+    );
+  };
+
+  on(
+    event: string,
+    callback: (evt: ChangeEvent<T>, param: BaseParam<T>) => void
+  ): void {
+    if (event === "change") {
+      this._changeCallbacks.push(callback);
+    }
   }
 
-  offChange(callback: (newValue: T) => void): void {
-    this._callbacks = this._callbacks.filter((cb) => cb !== callback);
+  off(
+    event: string,
+    callback: (evt: ChangeEvent<T>, param: BaseParam<T>) => void
+  ): void {
+    if (event === "change") {
+      this._changeCallbacks = this._changeCallbacks.filter(
+        (cb) => cb !== callback
+      );
+    }
   }
 }
 
@@ -98,6 +125,14 @@ export class NumberParam extends BaseParam<number> {
     this.min = min;
     this.max = max;
     this.step = step;
+  }
+
+  setValueNormalized = (v: number, type: string) => {
+    this.setValue(this.min + v * (this.max - this.min), type);
+  };
+
+  get valueNormalized(): number {
+    return (this._value - this.min) / (this.max - this.min);
   }
 }
 
@@ -113,9 +148,21 @@ export type ParamDefinition = {
   [key: string]: Param | Params;
 };
 
+export class ChangeEvent<T = any> {
+  key: string;
+  value: T;
+  type: string;
+
+  constructor(value: T, key = "", type = "") {
+    this.key = key;
+    this.value = value;
+    this.type = type;
+  }
+}
+
 export class Params<T extends ParamDefinition = ParamDefinition> {
   def: T;
-  private _changeCallbacks: Array<(key: string, newValue: any) => void> = [];
+  private _changeCallbacks: Array<(event: ChangeEvent) => void> = [];
 
   constructor(def: T) {
     this.def = def;
@@ -125,20 +172,30 @@ export class Params<T extends ParamDefinition = ParamDefinition> {
       const val = def[key];
       if (val instanceof BaseParam) {
         val.name = key;
-        val.onChange((newValue) => {
-          this._changeCallbacks.forEach((cb) => cb(`${key}`, newValue));
+        val.on("change", (evt) => {
+          this._changeCallbacks.forEach((cb) =>
+            cb(new ChangeEvent(evt.value, evt.key, evt.type))
+          );
         });
       } else if (val instanceof Params) {
-        val.on("change", (nestedKey, newValue) => {
+        val.on("change", (event) => {
           this._changeCallbacks.forEach((cb) =>
-            cb(`${key}.${nestedKey}`, newValue)
+            cb(new ChangeEvent(event.value, `${key}.${event.key}`))
           );
         });
       }
     }
   }
 
+  destroy = () => {
+    for (const plugin of this._plugins) {
+      plugin.destroy?.();
+    }
+  };
+
+  _plugins: IPlugin[] = [];
   plugins = (plugins: IPlugin[]) => {
+    this._plugins = plugins;
     plugins.forEach((plugin) => plugin.extend(this));
   };
 
@@ -148,7 +205,6 @@ export class Params<T extends ParamDefinition = ParamDefinition> {
   ): void;
   set(update: PartialDeep<UnwrapParamValue<T>>): void;
   set(...args: any[]): void {
-    console.log("Params.set", args);
     if (args.length === 2 && typeof args[0] === "string") {
       const path = args[0];
       const value = args[1];
@@ -195,13 +251,13 @@ export class Params<T extends ParamDefinition = ParamDefinition> {
     return val;
   }
 
-  on(event: string, callback: (key: string, newValue: any) => void) {
+  on(event: string, callback: (evt: ChangeEvent) => void) {
     if (event === "change") {
       this._changeCallbacks.push(callback);
     }
   }
 
-  off(event: string, callback: (key: string, newValue: any) => void) {
+  off(event: string, callback: (evt: ChangeEvent) => void) {
     if (event === "change") {
       this._changeCallbacks = this._changeCallbacks.filter(
         (cb) => cb !== callback
@@ -217,6 +273,19 @@ export class Params<T extends ParamDefinition = ParamDefinition> {
         values[key] = val.value;
       } else if (val instanceof Params) {
         values[key] = val.values();
+      }
+    }
+    return values;
+  }
+
+  valuesNormalized(): UnwrapParamValue<T> {
+    const values: any = {};
+    for (let key in this.def) {
+      const val = this.def[key];
+      if (val instanceof NumberParam) {
+        values[key] = val.valueNormalized;
+      } else if (val instanceof Params) {
+        values[key] = val.valuesNormalized();
       }
     }
     return values;

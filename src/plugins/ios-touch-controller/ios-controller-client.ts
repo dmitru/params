@@ -14,10 +14,18 @@ export class Controller {
     WSApiRPC.ServerEvents,
     WSApiRPC.ServerMethods
   >;
+  ws: WebSocket;
+
+  private closed = false;
+  destroy = () => {
+    this.closed = true;
+    this.ws.close();
+  };
 
   constructor() {
     let connectedClientSockets: WebSocket[] = [];
     const ws = new WebSocket("ws://localhost:7767");
+    this.ws = ws;
 
     const rpcServer: TypedJSONRPCServerAndClient<
       WSApiRPC.ServerEvents,
@@ -25,10 +33,7 @@ export class Controller {
     > = new JSONRPCServerAndClient(
       new JSONRPCServer(),
       new JSONRPCClient((request) => {
-        // console.log(
-        //   "[Controller]: Sending message to WebSocket server: ",
-        //   request
-        // );
+        if (this.closed) return;
         try {
           for (const sock of connectedClientSockets) {
             sock.send(JSON.stringify(request));
@@ -44,18 +49,14 @@ export class Controller {
 
     // called when the connection is established with the WebSocket server
     ws.addEventListener("open", () => {
+      if (this.closed) return;
       connectedClientSockets.push(ws);
       console.log("[Controller]: Connected to WebSocket server");
-
-      // ws.send('{"type":"get-values"}');
     });
 
     // called when a message is received from the WebSocket server
     ws.addEventListener("message", (evt) => {
-      // console.log(
-      //   "[Controller]: Received message from WebSocket server: ",
-      //   evt.data
-      // );
+      if (this.closed) return;
       rpcServer.receiveAndSend(JSON.parse(evt.data.toString()));
     });
 
