@@ -171,12 +171,53 @@ export class IosControllerPlugin implements IPlugin {
     const pageButtonDefs: ControlSurface.WidgetDef = {
       id: "pages",
       typeName: "row",
-      weight: 0.2,
+      weight: 0.1,
       children: this.layout.pages.map((p) => ({
         id: p.id,
         typeName: "btn",
         color: this.layout.currentPageId === p.id ? "#66aa33" : "#333333",
       })),
+    };
+
+    const controlButtonDefs: ControlSurface.WidgetDef = {
+      id: "control-buttons",
+      typeName: "row",
+      weight: 0.1,
+      children: [
+        {
+          id: "btns",
+          weight: 0.7,
+          typeName: "row",
+          children: [
+            {
+              typeName: "btn",
+              id: "undo",
+              color: "#333333",
+            },
+            {
+              typeName: "btn",
+              id: "redo",
+              color: "#333333",
+            },
+            {
+              typeName: "btn",
+              id: "save",
+              color: "#333333",
+            },
+            {
+              typeName: "btn",
+              id: "restore",
+              color: "#333333",
+            },
+          ],
+        },
+        {
+          typeName: "col",
+          id: "spacer",
+          children: [],
+          weight: 0.3,
+        },
+      ],
     };
 
     const currentPageDef = this.layout.currentPageId
@@ -187,8 +228,8 @@ export class IosControllerPlugin implements IPlugin {
         id: "root",
         typeName: "col",
         children: currentPageDef
-          ? [currentPageDef, pageButtonDefs]
-          : [pageButtonDefs],
+          ? [currentPageDef, pageButtonDefs, controlButtonDefs]
+          : [pageButtonDefs, controlButtonDefs],
       },
     };
 
