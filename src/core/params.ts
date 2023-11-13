@@ -164,6 +164,9 @@ export class Params<T extends ParamDefinition = ParamDefinition> {
   def: T;
   private _changeCallbacks: Array<(event: ChangeEvent) => void> = [];
 
+  private undoStack: UnwrapParamValue<T>[] = [];
+  private redoStack: UnwrapParamValue<T>[] = [];
+
   constructor(def: T) {
     this.def = def;
 
@@ -191,6 +194,29 @@ export class Params<T extends ParamDefinition = ParamDefinition> {
     for (const plugin of this._plugins) {
       plugin.destroy?.();
     }
+  };
+
+  pushUndoFrame = () => {
+    this.undoStack.push(this.values());
+    this.redoStack.length = 0;
+    // console.log("pushUndoFrame", this.undoStack, this.redoStack);
+  };
+
+  undo = () => {
+    if (this.undoStack.length <= 1) return;
+    const frameToRedo = this.undoStack.pop()!;
+    const frameToUndo = this.undoStack[this.undoStack.length - 1];
+    this.set(frameToUndo as any);
+    this.redoStack.push(frameToRedo);
+    // console.log("undo", frameToRedo, this.undoStack, this.redoStack);
+  };
+
+  redo = () => {
+    const frame = this.redoStack.pop();
+    if (!frame) return;
+    this.set(frame as any);
+    this.undoStack.push(frame);
+    // console.log("redo", frame, this.undoStack, this.redoStack);
   };
 
   _plugins: IPlugin[] = [];

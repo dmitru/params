@@ -19,6 +19,7 @@ const defaultOpts: DatGuiPluginOpts = {
 
 export class DatGuiPlugin implements IPlugin {
   PERSISTENCE_KEY: string;
+  instance?: Params<any>;
 
   constructor(opts: DatGuiPluginOpts = defaultOpts) {
     this.PERSISTENCE_KEY = opts.key ?? defaultOpts.key;
@@ -26,16 +27,32 @@ export class DatGuiPlugin implements IPlugin {
 
   _autosaveChangeCallback = () => {};
 
+  onKeyDown = (evt: KeyboardEvent) => {
+    const isUndo = evt.key === "z" && (evt.ctrlKey || evt.metaKey);
+    const isRedo =
+      evt.key === "z" && (evt.ctrlKey || evt.metaKey) && evt.shiftKey;
+
+    if (isRedo) {
+      this.instance?.redo();
+    } else if (isUndo) {
+      this.instance?.undo();
+    }
+  };
+
   destroy(): void {
     this.gui?.destroy();
+    window.removeEventListener("keydown", this.onKeyDown);
   }
 
   gui?: dat.GUI;
 
-  extend(instance: Params<any>): void {
+  extend(paramsInstance: Params<any>): void {
     const plugin = this;
+    plugin.instance = paramsInstance;
 
-    instance.datGui = function (gui: dat.GUI) {
+    window.addEventListener("keydown", this.onKeyDown);
+
+    paramsInstance.datGui = function (gui: dat.GUI) {
       plugin.gui = gui;
       addDatGuiControls(this, gui);
     };
@@ -43,11 +60,19 @@ export class DatGuiPlugin implements IPlugin {
     function addDatGuiControls(params: Params, gui: dat.GUI) {
       for (const [key, param] of Object.entries(params.def)) {
         if (param instanceof ColorParam) {
-          gui.addColor(param, "value").name(param.name);
+          gui
+            .addColor(param, "value")
+            .name(param.name)
+            .onFinishChange(() => {
+              paramsInstance.pushUndoFrame();
+            });
         } else if (param instanceof NumberParam) {
           gui
             .add(param, "value", param.min, param.max, param.step)
-            .name(param.name);
+            .name(param.name)
+            .onFinishChange(() => {
+              paramsInstance.pushUndoFrame();
+            });
         } else if (param instanceof Params) {
           const folder = gui.addFolder(key);
           folder.open();
